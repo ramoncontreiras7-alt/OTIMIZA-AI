@@ -1,9 +1,8 @@
 # =============================================================================
 # init-github.ps1 — Publica o projeto Otimiza AI no GitHub como "OTIMIZA-AI"
-# Uso:
+# Uso (ja executado, este arquivo fica como referencia):
 #   1. Crie o repo VAZIO em https://github.com/new com o nome "OTIMIZA-AI"
-#      (SEM marcar README/.gitignore/license, ja temos tudo)
-#   2. Edite as variaveis $GithubUser e (opcional) $RepoName abaixo
+#   2. Edite $GithubUser e (opcional) $RepoName abaixo
 #   3. Execute: powershell -ExecutionPolicy Bypass -File .\init-github.ps1
 # =============================================================================
 
@@ -92,7 +91,7 @@ Write-Host "`n[6/6] Push para GitHub..." -ForegroundColor Cyan
 & git push -u origin $Branch
 
 if ($LASTEXITCODE -eq 0) {
-    $repoUrl = if ($UseSsh) { "https://github.com/${GithubUser}/${RepoName}" } else { "https://github.com/${GithubUser}/${RepoName}" }
+    $repoUrl = "https://github.com/${GithubUser}/${RepoName}"
     Write-Host "`n✅ PROJETO PUBLICADO COM SUCESSO!" -ForegroundColor Green
     Write-Host "   URL: $repoUrl" -ForegroundColor Green
     Write-Host "`nProximo passo: a CI (Actions) vai gerar o APK debug como artifact." -ForegroundColor Cyan

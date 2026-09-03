@@ -1,6 +1,6 @@
 # Publicação do Otimiza AI no GitHub
 
-> **Repositório criado:** `https://github.com/ramoncontreiras7-alt/OTIMIZA-AI`
+> **Repositório criado:** https://github.com/ramoncontreiras7-alt/OTIMIZA-AI
 >
 > ⚠️ O nome do repo está em **CAIXA ALTA** (`OTIMIZA-AI`) — o GitHub preserva case na URL.
 > O nome do pacote Android segue sendo `com.otimiza.delivery` (FQCN), apenas o **repo** muda.
@@ -9,58 +9,49 @@
 
 ✅ Repo já criado: **https://github.com/ramoncontreiras7-alt/OTIMIZA-AI**
 
-⚠️ Não faça mais nada no GitHub — vamos apenas fazer o **push** a partir do worktree.
+⚠️ Não faça mais nada no GitHub — o push já foi feito. Esta página é só referência futura.
 
-## 2. Configurar suas credenciais no script
-
-Abra `init-github.ps1` (na raiz do projeto) e edite **apenas** o bloco de configuração:
-
-```powershell
-$GithubUser = "ramoncontreiras7-alt"   # ← seu user (já correto)
-$RepoName   = "OTIMIZA-AI"             # já está correto (case-sensitive)
-$Branch     = "master"                 # ou "main" se preferir
-$UseSsh     = $true                    # true = SSH; false = PAT
-```
-
-## 3. Executar
+## 2. Comandos executados (referência)
 
 ```powershell
 cd C:\.kilo\worktrees\otimiza-delivery
-powershell -ExecutionPolicy Bypass -File .\init-github.ps1
+git remote add origin https://github.com/ramoncontreiras7-alt/OTIMIZA-AI.git
+git branch -M master
+git push -u origin master
 ```
 
-O script automaticamente:
-- Configura `user.name` / `user.email` globais (se faltarem).
-- Gera chave SSH `~/.ssh/id_ed25519` e exibe a pública.
-- Aguarda você colar a chave em https://github.com/settings/keys.
-- Testa `ssh -T git@github.com`.
-- Faz `git push -u origin master`.
+## 3. Próximas publicações
 
-## 4. Verificar publicação
+Para atualizações futuras:
 
-URL final:
-```
-https://github.com/ramoncontreiras7-alt/OTIMIZA-AI
+```powershell
+cd C:\.kilo\worktrees\otimiza-delivery
+git add -A
+git commit -m "sua mensagem"
+git push
 ```
 
-Você deve ver:
-- 3 commits (`feat: scaffold…`, `release: pipeline estatico…`, `docs: publish as 'otimiza-ai'…`)
-- 30+ classes Kotlin
-- Workflows `.github/workflows/ci.yml` e `deploy.yml`
-- `init-github.ps1`, `ARCHITECTURE.md`, `RELEASE.md`, `CHANGELOG.md`, `PUBLISH.md`
-
-## 5. Baixar o APK debug
-
-Acesse https://github.com/ramoncontreiras7-alt/OTIMIZA-AI/actions
-- Clique no primeiro workflow **CI - Otimiza AI** (verde)
-- Role até **Artifacts** → `otimiza-ai-debug-apk` → Download
-- Instale no celular: `adb install -r app-debug.apk`
-
-## 6. Próximos releases
+Para um release versionado (gera AAB + mapping):
 
 ```powershell
 git tag -a v1.0.0 -m "release: MVP Otimiza AI"
 git push origin v1.0.0
 ```
 
-A `deploy.yml` gera AAB release + mapping R8 automaticamente.
+## 4. Verificar o repositório
+
+URL: https://github.com/ramoncontreiras7-alt/OTIMIZA-AI
+
+Você deve ver:
+- 4 commits
+- 30+ classes Kotlin
+- 7 testes unitários
+- Workflows `.github/workflows/ci.yml` e `deploy.yml`
+- `init-github.ps1`, `publicar-otimiza-ai.bat`, `ARCHITECTURE.md`, `RELEASE.md`, `CHANGELOG.md`, `PUBLISH.md`
+
+## 5. Baixar o APK debug
+
+Acesse https://github.com/ramoncontreiras7-alt/OTIMIZA-AI/actions
+- Clique no workflow **CI - Otimiza AI** (verde)
+- Role até **Artifacts** → `otimiza-ai-debug-apk` → Download
+- Instale no celular: `adb install -r app-debug.apk`
