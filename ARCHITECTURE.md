@@ -1,6 +1,8 @@
 # Otimiza AI — Arquitetura
 
 > Documento visual da arquitetura: **camadas Clean**, **fluxo de imutabilidade do ID nativo**, **pipeline CI/CD**.
+>
+> **Repositório GitHub:** `otimiza-ai` (não `otimiza-delivery`). Pacote Android continua `com.otimiza.delivery`.
 
 ---
 

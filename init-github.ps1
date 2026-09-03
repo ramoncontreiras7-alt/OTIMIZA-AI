@@ -1,8 +1,9 @@
 # =============================================================================
-# init-github.ps1 — Publica o projeto Otimiza AI em um repositorio GitHub novo
+# init-github.ps1 — Publica o projeto Otimiza AI no GitHub como "otimiza-ai"
 # Uso:
-#   1. Crie o repo vazio em https://github.com/new (SEM README/.gitignore/license)
-#   2. Edite as variaveis $GithubUser e $RepoName abaixo
+#   1. Crie o repo VAZIO em https://github.com/new com o nome "otimiza-ai"
+#      (SEM marcar README/.gitignore/license, ja temos tudo)
+#   2. Edite as variaveis $GithubUser e (opcional) $RepoName abaixo
 #   3. Execute: powershell -ExecutionPolicy Bypass -File .\init-github.ps1
 # =============================================================================
 

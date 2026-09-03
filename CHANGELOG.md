@@ -12,7 +12,8 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 - `proguard-rules.pro` — regras R8 com preservação de value classes, Room (PK composta), Retrofit, Hilt, ML Kit, CameraX, Mapbox.
 - `lint-baseline.xml` — baseline de exceções documentadas.
 - `RELEASE.md` — checklist operacional de release.
-- `init-github.ps1` — script de bootstrap do repositório GitHub (SSH ou PAT).
+- `init-github.ps1` — script de bootstrap do repositório GitHub (`otimiza-ai`, SSH ou PAT).
+- `PUBLISH.md` — guia passo a passo para publicação no GitHub como `otimiza-ai`.
 - CI artifact: APK debug (`otimiza-ai-debug-apk`) anexado a cada push.
 - Release artifact: AAB assinado (`otimiza-ai-release-aab`) + mapping R8 (`otimiza-ai-mapping`) em tags `v*.*.*`.
 - `ARCHITECTURE.md` — diagramas Mermaid (camadas, fluxo PK composta, pipeline CI/CD).
