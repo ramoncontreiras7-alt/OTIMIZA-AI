@@ -1,7 +1,7 @@
 # =============================================================================
-# init-github.ps1 — Publica o projeto Otimiza AI no GitHub como "otimiza-ai"
+# init-github.ps1 — Publica o projeto Otimiza AI no GitHub como "OTIMIZA-AI"
 # Uso:
-#   1. Crie o repo VAZIO em https://github.com/new com o nome "otimiza-ai"
+#   1. Crie o repo VAZIO em https://github.com/new com o nome "OTIMIZA-AI"
 #      (SEM marcar README/.gitignore/license, ja temos tudo)
 #   2. Edite as variaveis $GithubUser e (opcional) $RepoName abaixo
 #   3. Execute: powershell -ExecutionPolicy Bypass -File .\init-github.ps1
@@ -10,11 +10,11 @@
 $ErrorActionPreference = "Stop"
 
 # ---------- CONFIGURAR AQUI ----------
-$GithubUser = "SEU-USUARIO-GITHUB"      # ex: vivenotimiza
-$RepoName   = "otimiza-ai"              # nome do repo criado no GitHub
-$Branch     = "master"                  # main ou master, conforme o default do seu GitHub
-$Visibility = "public"                  # public | private
-$UseSsh     = $true                     # $true = SSH (recomendado); $false = HTTPS+PAT
+$GithubUser = "ramoncontreiras7-alt"
+$RepoName   = "OTIMIZA-AI"             # nome EXATO do repo criado no GitHub (case-sensitive)
+$Branch     = "master"                 # main ou master, conforme o default do seu GitHub
+$Visibility = "public"                 # public | private
+$UseSsh     = $true                    # $true = SSH (recomendado); $false = HTTPS+PAT
 # ------------------------------------
 
 $Worktree = "C:\.kilo\worktrees\otimiza-delivery"
