@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Otimiza AI</string>
+    <string name="accessibility_service_description">
+        Lê passivamente as telas dos aplicativos de entrega (iFood, Mercado Livre, Lalamove)
+        para capturar o identificador nativo da parada e o endereço, sem alterar os dados originais.
+    </string>
+</resources>

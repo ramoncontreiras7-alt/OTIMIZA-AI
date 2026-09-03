@@ -1,0 +1,31 @@
+name: Deploy - Otimiza AI
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Set up Android SDK 36
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 36
+          build-tools: 36.0.0
+
+      - name: Build release AAB
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-version: 9.0
+          add-arguments: bundleRelease --no-daemon --console=plain
