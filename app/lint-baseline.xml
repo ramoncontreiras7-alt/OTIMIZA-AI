@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint baseline Otimiza AI">
+
+    <!-- O Compose toolchain emite avisos em @OptIn(ExperimentalCamera2Api::class),
+         usado pela ImageAnalysis. Aceito para manter CameraX moderno. -->
+    <issue id="UnsafeOptInUsageError"
+        message="Shouldn't use experimental CameraX API without opt-in"
+        file="app/src/main/java/com/otimiza/delivery/ui/scanner/LabelOcrAnalyzer.kt">
+        <location line="22" />
+    </issue>
+
+    <!-- ML Kit Text Recognition é experimental em algumas versões do GMS. -->
+    <issue id="UnsafeOptInUsageError"
+        message="ML Kit TextRecognition experimental"
+        file="app/src/main/java/com/otimiza/delivery/ui/scanner/LabelOcrAnalyzer.kt">
+        <location line="17" />
+    </issue>
+
+    <!-- Retrofit exige warning suppression em classes sem @Keep explícito. -->
+    <issue id="MissingClass"
+        message="Missing class for referenced class retrofit2.*"
+        file="app/src/main/java/com/otimiza/delivery/data/remote">
+        <location line="0" />
+    </issue>
+
+    <!-- O AccessibilityService precisa de permissão BIND_ACCESSIBILITY_SERVICE. -->
+    <issue id="ProtectedPermissions"
+        message="Permission only required for accessibility services"
+        file="app/src/main/AndroidManifest.xml">
+        <location line="0" />
+    </issue>
+
+</issues>

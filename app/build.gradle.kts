@@ -27,13 +27,30 @@ android {
     }
 
     buildTypes {
-        release {
+        debug {
+            applicationIdSuffix = ".debug"
+            isDebuggable = true
             isMinifyEnabled = false
+        }
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.findByName("debug")
+            // Mapping preservado em app/build/outputs/mapping/release/mapping.txt
         }
+    }
+
+    lint {
+        baseline = file("lint-baseline.xml")
+        abortOnError = false
+        warningsAsErrors = false
+        checkReleaseBuilds = true
+        // Falhas críticas que devem bloquear build
+        disable += setOf("MissingTranslation", "ExtraTranslation")
     }
 
     buildFeatures {

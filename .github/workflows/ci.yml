@@ -2,8 +2,9 @@ name: CI - Otimiza AI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, master]
   pull_request:
+  workflow_dispatch:        # permite rodar manualmente pela aba Actions
 
 env:
   GRADLE_OPTS: -Xmx4096m -Dfile.encoding=UTF-8
@@ -37,6 +38,20 @@ jobs:
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
           add-arguments: test --no-daemon --console=plain
+
+      - name: Build debug APK
+        uses: gradle/gradle-build-action@v2
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
+          add-arguments: assembleDebug --no-daemon --console=plain
+
+      - name: Upload debug APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: otimiza-ai-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
 
       - name: Upload test reports
         if: always()

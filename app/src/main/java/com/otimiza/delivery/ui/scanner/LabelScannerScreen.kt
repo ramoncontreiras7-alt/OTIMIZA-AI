@@ -35,12 +35,12 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.otimiza.delivery.domain.model.Platform
 import java.util.concurrent.Executors
 
 @Composable
 fun LabelScannerScreen(
-    platformPattern: Regex,
-    onStopDetected: (String) -> Unit,
+    onStopDetected: (nativeStopId: String, platform: Platform) -> Unit,
     onNavigateBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -59,8 +59,8 @@ fun LabelScannerScreen(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted -> hasCameraPermission = granted }
 
-    val analyzer = remember(platformPattern) {
-        LabelOcrAnalyzer(platformPattern) { nativeId, _ -> onStopDetected(nativeId) }
+    val analyzer = remember {
+        LabelOcrAnalyzer { nativeId, platform -> onStopDetected(nativeId, platform) }
     }
 
     DisposableEffect(analyzer) {

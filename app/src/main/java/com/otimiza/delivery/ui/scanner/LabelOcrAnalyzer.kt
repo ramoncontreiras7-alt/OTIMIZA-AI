@@ -8,10 +8,10 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
-import com.otimiza.delivery.data.local.model.Platform
+import com.otimiza.delivery.domain.model.Platform
+import com.otimiza.delivery.domain.util.PlatformPatterns
 
 class LabelOcrAnalyzer(
-    private val platformPattern: Regex,
     private val onNativeIdDetected: (nativeStopId: String, platform: Platform) -> Unit
 ) : ImageAnalysis.Analyzer {
 
@@ -39,10 +39,10 @@ class LabelOcrAnalyzer(
         recognizer.process(image)
             .addOnSuccessListener { visionText ->
                 visionText.textBlocks.forEach { block ->
-                    platformPattern.find(block.text)?.value?.let { rawNativeId ->
-                        val platform = detectPlatform(rawNativeId)
-                        mainHandler.post { onNativeIdDetected(rawNativeId, platform) }
-                    }
+                    val match = PlatformPatterns.identifyPlatformAndId(block.text) ?: return@forEach
+                    val (platform, nativeId) = match
+                    if (PlatformPatterns.isDuplicate(nativeId)) return@forEach
+                    mainHandler.post { onNativeIdDetected(nativeId, platform) }
                 }
             }
             .addOnFailureListener { e ->
@@ -52,13 +52,6 @@ class LabelOcrAnalyzer(
                 imageProxy.close()
                 processing = false
             }
-    }
-
-    private fun detectPlatform(nativeId: String): Platform = when {
-        nativeId.startsWith("IFOOD", ignoreCase = true) -> Platform.IFOOD
-        nativeId.startsWith("ML", ignoreCase = true) -> Platform.MERCADO_LIVRE
-        nativeId.startsWith("LALA", ignoreCase = true) -> Platform.LALAMOVE
-        else -> Platform.IFOOD
     }
 
     fun release() {
