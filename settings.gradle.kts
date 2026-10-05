@@ -16,6 +16,7 @@ dependencyResolutionManagement {
 
 rootProject.name = "OtimizaAI"
 
-// Módulos do projeto. O módulo :app (telas) entra nos próximos passos.
+// Módulos do projeto: app (telas), domain (regras), data (banco).
+include(":app")
 include(":domain")
 include(":data")

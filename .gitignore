@@ -16,5 +16,8 @@ captures/
 # Chaves e segredos NUNCA vão para o repositório
 *.jks
 *.keystore
+# Exceção: chave de DEPURAÇÃO compartilhada (não é segredo), para o APK de teste
+# poder ser atualizado sem desinstalar.
+!app/debug.keystore
 keystore.properties
 secrets.properties

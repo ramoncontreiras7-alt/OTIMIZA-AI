@@ -1,5 +1,6 @@
-# Verificação automática: a cada envio de código, o GitHub compila o projeto
-# e roda todos os testes. Se algo quebrar, aparece um X vermelho no commit.
+# Verificação automática: a cada envio de código, o GitHub compila o projeto,
+# roda todos os testes e gera o APK. Se algo quebrar, aparece um X vermelho no commit.
+# Quando tudo passa, o APK é publicado em "Releases" com um link fixo para baixar no celular.
 name: CI
 
 on:
@@ -14,7 +15,9 @@ concurrency:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
+    permissions:
+      contents: write
     steps:
       - name: Baixar o código
         uses: actions/checkout@v4
@@ -36,6 +39,28 @@ jobs:
 
       - name: Testes e compilação do módulo de dados (banco)
         run: ./gradlew :data:testDebugUnitTest :data:assembleDebug --stacktrace
+
+      - name: Gerar o APK do app
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Guardar o APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: otimiza-ai-apk
+          path: app/build/outputs/apk/debug/*.apk
+
+      - name: Publicar o APK (link fixo para o celular)
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk otimiza-ai.apk
+          gh release delete apk-teste --cleanup-tag --yes || true
+          gh release create apk-teste otimiza-ai.apk \
+            --prerelease \
+            --target "${GITHUB_SHA}" \
+            --title "Otimiza AI — versão de teste ${GITHUB_RUN_NUMBER}" \
+            --notes "APK de teste gerado automaticamente a partir da branch ${GITHUB_REF_NAME} (commit ${GITHUB_SHA::7}). Baixe o arquivo otimiza-ai.apk no celular Android e instale."
 
       - name: Guardar relatórios de teste
         if: always()
