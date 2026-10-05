@@ -40,14 +40,14 @@ jobs:
       - name: Testes e compilação do módulo de dados (banco)
         run: ./gradlew :data:testDebugUnitTest :data:assembleDebug --stacktrace
 
-      - name: Gerar o APK do app
-        run: ./gradlew :app:assembleDebug --stacktrace
+      - name: Gerar o APK otimizado (release com R8)
+        run: ./gradlew :app:assembleRelease --stacktrace
 
       - name: Guardar o APK
         uses: actions/upload-artifact@v4
         with:
           name: otimiza-ai-apk
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/release/*.apk
 
       - name: Resumo dos testes
         if: always()
@@ -71,13 +71,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk otimiza-ai.apk
+          cp app/build/outputs/apk/release/app-release.apk otimiza-ai.apk
           gh release delete apk-teste --cleanup-tag --yes || true
           gh release create apk-teste otimiza-ai.apk \
             --prerelease \
             --target "${GITHUB_SHA}" \
             --title "Otimiza AI — versão de teste ${GITHUB_RUN_NUMBER}" \
-            --notes "APK de teste gerado automaticamente a partir da branch ${GITHUB_REF_NAME} (commit ${GITHUB_SHA::7}). Baixe o arquivo otimiza-ai.apk no celular Android e instale.
+            --notes "APK de teste gerado automaticamente a partir da branch ${GITHUB_REF_NAME} (commit ${GITHUB_SHA::7}). Versão otimizada (release com R8). Baixe o arquivo otimiza-ai.apk no celular Android e instale.
 
           $(cat resumo-testes.md)"
 

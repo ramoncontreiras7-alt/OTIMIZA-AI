@@ -34,6 +34,17 @@ android {
         }
     }
 
+    buildTypes {
+        // Versão otimizada para uso diário: R8 encolhe e acelera o código e remove
+        // recursos não usados. Assinada com a mesma chave de teste, para instalar por cima.
+        release {
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("debug")
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
