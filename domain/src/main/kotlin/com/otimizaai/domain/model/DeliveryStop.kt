@@ -34,6 +34,12 @@ data class DeliveryStop private constructor(
     val address: DeliveryAddress,
     val status: DeliveryStatus,
     val freightCents: Int,
+    /**
+     * Galpão / ponto de coleta de onde a parada saiu, como lido na tela
+     * (ex.: "BRNCE20 - Agencia Mercado Livre - ECOPRINT"). Usado pela regra
+     * MinimumRouteValue. É texto livre: NÃO faz parte da identidade da parada.
+     */
+    val warehouseName: String? = null,
 ) {
 
     init {
@@ -53,6 +59,10 @@ data class DeliveryStop private constructor(
 
     val longitude: Double?
         get() = coordinate?.longitude
+
+    /** Bairro de destino (vem do endereço). Usado pela regra NeighborhoodBonus. */
+    val neighborhood: String?
+        get() = address.neighborhood
 
     /** true quando a parada já tem coordenada e pode entrar na otimização de rota. */
     val isRoutable: Boolean
@@ -95,6 +105,7 @@ data class DeliveryStop private constructor(
             coordinate: GeoCoordinate? = null,
             status: DeliveryStatus = DeliveryStatus.PENDING,
             freightCents: Int = 0,
+            warehouseName: String? = null,
         ): DeliveryStop = DeliveryStop(
             id = id,
             platform = platform,
@@ -103,6 +114,7 @@ data class DeliveryStop private constructor(
             address = address,
             status = status,
             freightCents = freightCents,
+            warehouseName = warehouseName?.trim()?.takeIf { it.isNotEmpty() },
         )
     }
 }

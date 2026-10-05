@@ -14,7 +14,8 @@ enum class Platform(val id: PlatformId) {
     IFOOD(PlatformId("IFOOD")),
     MERCADO_LIVRE(PlatformId("MERCADO_LIVRE")),
     LALAMOVE(PlatformId("LALAMOVE")),
-    AMAZON_FLEX(PlatformId("AMAZON_FLEX"));
+    AMAZON_FLEX(PlatformId("AMAZON_FLEX")),
+    MAGALU(PlatformId("MAGALU"));
 
     companion object {
         private val byId: Map<PlatformId, Platform> = entries.associateBy { it.id }

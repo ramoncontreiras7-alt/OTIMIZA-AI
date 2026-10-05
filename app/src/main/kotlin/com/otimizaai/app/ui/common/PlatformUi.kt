@@ -21,6 +21,7 @@ val Platform.label: String
         Platform.MERCADO_LIVRE -> "Mercado Livre"
         Platform.LALAMOVE -> "Lalamove"
         Platform.AMAZON_FLEX -> "Amazon Flex"
+        Platform.MAGALU -> "Magalu"
     }
 
 /** Cor de identificação de cada plataforma (bolinha nos cards e no mapa). */
@@ -30,6 +31,7 @@ val Platform.color: Color
         Platform.MERCADO_LIVRE -> Color(0xFFFFD400)
         Platform.LALAMOVE -> Color(0xFFF16622)
         Platform.AMAZON_FLEX -> Color(0xFF2D6CDF)
+        Platform.MAGALU -> Color(0xFF0086FF)
     }
 
 val DeliveryStatus.label: String
