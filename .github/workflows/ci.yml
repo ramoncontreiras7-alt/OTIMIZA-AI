@@ -49,6 +49,23 @@ jobs:
           name: otimiza-ai-apk
           path: app/build/outputs/apk/debug/*.apk
 
+      - name: Resumo dos testes
+        if: always()
+        run: |
+          python3 - <<'PY' > resumo-testes.md
+          import glob, xml.etree.ElementTree as ET
+          linhas = ["| Suíte | Testes | Falhas | Pulados |", "|---|---|---|---|"]
+          total = falhas = 0
+          for f in sorted(glob.glob("**/build/test-results/**/TEST-*.xml", recursive=True)):
+              r = ET.parse(f).getroot()
+              t = int(r.get("tests")); x = int(r.get("failures")) + int(r.get("errors")); s = int(r.get("skipped"))
+              total += t; falhas += x
+              linhas.append(f"| {r.get('name').split('.')[-1]} | {t} | {x} | {s} |")
+          print(f"**Testes automáticos: {total} executados, {falhas} falha(s).**\n")
+          print("\n".join(linhas))
+          PY
+          cat resumo-testes.md >> "$GITHUB_STEP_SUMMARY"
+
       - name: Publicar o APK (link fixo para o celular)
         if: github.event_name == 'push'
         env:
@@ -60,7 +77,9 @@ jobs:
             --prerelease \
             --target "${GITHUB_SHA}" \
             --title "Otimiza AI — versão de teste ${GITHUB_RUN_NUMBER}" \
-            --notes "APK de teste gerado automaticamente a partir da branch ${GITHUB_REF_NAME} (commit ${GITHUB_SHA::7}). Baixe o arquivo otimiza-ai.apk no celular Android e instale."
+            --notes "APK de teste gerado automaticamente a partir da branch ${GITHUB_REF_NAME} (commit ${GITHUB_SHA::7}). Baixe o arquivo otimiza-ai.apk no celular Android e instale.
+
+          $(cat resumo-testes.md)"
 
       - name: Guardar relatórios de teste
         if: always()
