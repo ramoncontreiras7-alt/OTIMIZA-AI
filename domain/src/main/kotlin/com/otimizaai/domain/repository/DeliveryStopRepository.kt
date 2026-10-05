@@ -65,4 +65,19 @@ interface DeliveryStopRepository {
     suspend fun transferToSession(key: StopKey, targetSessionId: RouteSessionId): Boolean
 
     suspend fun deleteBySession(sessionId: RouteSessionId)
+
+    /** Remove UMA parada (decisão explícita do entregador). */
+    suspend fun delete(key: StopKey)
+
+    /**
+     * Grava a nova ordem da rota. [keysInOrder] é a lista completa na ordem desejada.
+     * Só a posição muda; ID e plataforma ficam intocados.
+     */
+    suspend fun reorder(sessionId: RouteSessionId, keysInOrder: List<StopKey>)
+
+    /**
+     * Traz para [targetSessionId] todas as paradas PENDENTES de outras rotas
+     * (como "Reutilizar paradas anteriores" do Spoke). Retorna quantas vieram.
+     */
+    suspend fun transferPendingFromOtherSessions(targetSessionId: RouteSessionId): Int
 }

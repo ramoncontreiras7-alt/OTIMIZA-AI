@@ -35,19 +35,19 @@ abstract class DeliveryStopDao {
     // ---------------------------------------------------------------- Leituras
 
     @Query(
-        "SELECT * FROM delivery_stops WHERE session_id = :sessionId ORDER BY rowid ASC"
+        "SELECT * FROM delivery_stops WHERE session_id = :sessionId ORDER BY route_order ASC, rowid ASC"
     )
     abstract fun observeBySession(sessionId: String): Flow<List<DeliveryStopEntity>>
 
     @Query(
-        "SELECT * FROM delivery_stops WHERE session_id = :sessionId ORDER BY rowid ASC"
+        "SELECT * FROM delivery_stops WHERE session_id = :sessionId ORDER BY route_order ASC, rowid ASC"
     )
     abstract suspend fun findBySession(sessionId: String): List<DeliveryStopEntity>
 
     @Query(
         "SELECT * FROM delivery_stops " +
             "WHERE session_id = :sessionId AND status = :status " +
-            "ORDER BY rowid ASC"
+            "ORDER BY route_order ASC, rowid ASC"
     )
     abstract suspend fun findBySessionAndStatus(
         sessionId: String,
@@ -73,7 +73,7 @@ abstract class DeliveryStopDao {
     @Query(
         "SELECT * FROM delivery_stops " +
             "WHERE session_id = :sessionId AND (latitude IS NULL OR longitude IS NULL) " +
-            "ORDER BY rowid ASC"
+            "ORDER BY route_order ASC, rowid ASC"
     )
     abstract suspend fun findPendingGeocoding(sessionId: String): List<DeliveryStopEntity>
 
@@ -118,7 +118,8 @@ abstract class DeliveryStopDao {
      * entregador confirmar. Retorna quantas linhas mudaram (0 ou 1).
      */
     @Query(
-        "UPDATE delivery_stops SET session_id = :targetSessionId, status = :resetStatus " +
+        "UPDATE delivery_stops SET session_id = :targetSessionId, status = :resetStatus, " +
+            "route_order = (SELECT COALESCE(MAX(route_order), 0) + 1 FROM delivery_stops WHERE session_id = :targetSessionId) " +
             "WHERE native_stop_id = :nativeStopId AND platform_id = :platformId"
     )
     abstract suspend fun transferToSession(
@@ -131,6 +132,27 @@ abstract class DeliveryStopDao {
     @Query("DELETE FROM delivery_stops WHERE session_id = :sessionId")
     abstract suspend fun deleteBySession(sessionId: String)
 
+    @Query("DELETE FROM delivery_stops WHERE native_stop_id = :nativeStopId AND platform_id = :platformId")
+    abstract suspend fun deleteByKey(nativeStopId: String, platformId: String): Int
+
+    /** Próxima posição livre no fim da rota. */
+    @Query("SELECT COALESCE(MAX(route_order), 0) + 1 FROM delivery_stops WHERE session_id = :sessionId")
+    abstract suspend fun nextOrder(sessionId: String): Int
+
+    /** Atualiza SOMENTE a posição na rota. */
+    @Query(
+        "UPDATE delivery_stops SET route_order = :order " +
+            "WHERE native_stop_id = :nativeStopId AND platform_id = :platformId"
+    )
+    abstract suspend fun updateOrder(nativeStopId: String, platformId: String, order: Int): Int
+
+    /** Paradas pendentes que estão em OUTRAS rotas. */
+    @Query(
+        "SELECT * FROM delivery_stops WHERE session_id != :sessionId AND status = 'PENDING' " +
+            "ORDER BY session_id ASC, route_order ASC, rowid ASC"
+    )
+    abstract suspend fun findPendingOutside(sessionId: String): List<DeliveryStopEntity>
+
     // --------------------------------------------------------- Operação composta
 
     /**
@@ -142,9 +164,18 @@ abstract class DeliveryStopDao {
      */
     @Transaction
     open suspend fun insertOrGetExisting(entity: DeliveryStopEntity): DeliveryStopEntity? {
-        val rowId = insertIfAbsent(entity)
+        // A parada nova entra no FIM da rota.
+        val rowId = insertIfAbsent(entity.copy(routeOrder = nextOrder(entity.sessionId)))
         if (rowId != -1L) return null
         return findByKey(entity.nativeStopId, entity.platformId)
+    }
+
+    /** Grava a ordem completa de uma rota numa única transação. */
+    @Transaction
+    open suspend fun applyOrder(keys: List<Pair<String, String>>) {
+        keys.forEachIndexed { index, (nativeStopId, platformId) ->
+            updateOrder(nativeStopId, platformId, index + 1)
+        }
     }
 }
 

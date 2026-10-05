@@ -24,9 +24,12 @@ import com.otimizaai.app.ui.offer.OfferScreen
 import com.otimizaai.app.ui.settings.SettingsScreen
 import com.otimizaai.app.ui.stops.StopsScreen
 import com.otimizaai.app.ui.today.TodayScreen
+import com.otimizaai.app.ui.wizard.CostWizardScreen
+
+private const val WIZARD_ROUTE = "assistente-custos"
 
 private enum class Tab(val route: String, val label: String, val icon: ImageVector) {
-    TODAY("hoje", "Hoje", Icons.Filled.Home),
+    TODAY("hoje", "Rota", Icons.Filled.Home),
     STOPS("paradas", "Paradas", Icons.Filled.LocationOn),
     OFFER("oferta", "Avaliar", Icons.Filled.ThumbUp),
     SETTINGS("ajustes", "Ajustes", Icons.Filled.Settings),
@@ -67,7 +70,8 @@ fun AppNavigation() {
             composable(Tab.TODAY.route) { TodayScreen(onGoToStops = { nav.navigate(Tab.STOPS.route) { launchSingleTop = true } }) }
             composable(Tab.STOPS.route) { StopsScreen() }
             composable(Tab.OFFER.route) { OfferScreen() }
-            composable(Tab.SETTINGS.route) { SettingsScreen() }
+            composable(Tab.SETTINGS.route) { SettingsScreen(onOpenWizard = { nav.navigate(WIZARD_ROUTE) }) }
+            composable(WIZARD_ROUTE) { CostWizardScreen(onClose = { nav.popBackStack() }) }
         }
     }
 }

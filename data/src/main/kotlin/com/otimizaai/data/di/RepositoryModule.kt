@@ -1,7 +1,9 @@
 package com.otimizaai.data.di
 
 import com.otimizaai.data.repository.DeliveryStopRepositoryImpl
+import com.otimizaai.data.repository.RouteRepositoryImpl
 import com.otimizaai.domain.repository.DeliveryStopRepository
+import com.otimizaai.domain.repository.RouteRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -22,4 +24,10 @@ abstract class RepositoryModule {
     abstract fun bindDeliveryStopRepository(
         impl: DeliveryStopRepositoryImpl,
     ): DeliveryStopRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindRouteRepository(
+        impl: RouteRepositoryImpl,
+    ): RouteRepository
 }

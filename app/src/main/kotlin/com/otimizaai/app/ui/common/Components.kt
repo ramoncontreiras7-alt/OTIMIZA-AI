@@ -19,8 +19,11 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.otimizaai.app.ui.theme.ProfitBad
-import com.otimizaai.app.ui.theme.ProfitGood
+import com.otimizaai.app.ui.theme.BandBad
+import com.otimizaai.app.ui.theme.BandGood
+import com.otimizaai.app.ui.theme.BandMid
+import com.otimizaai.domain.model.ProfitBand
+import com.otimizaai.domain.model.ProfitRating
 import com.otimizaai.domain.model.RouteEconomics
 import com.otimizaai.domain.util.BrNumber
 
@@ -48,7 +51,7 @@ fun SectionCard(title: String? = null, content: @Composable () -> Unit) {
 @Composable
 fun ValueRow(label: String, value: String, bold: Boolean = false, valueColor: Color = Color.Unspecified) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
         Text(
             value,
             fontFamily = FontFamily.Monospace,
@@ -60,12 +63,24 @@ fun ValueRow(label: String, value: String, bold: Boolean = false, valueColor: Co
 
 /** Campo para números (abre o teclado numérico). */
 @Composable
-fun NumberField(value: String, onValueChange: (String) -> Unit, label: String, modifier: Modifier = Modifier, suffix: String? = null) {
+fun NumberField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    suffix: String? = null,
+    placeholder: String? = null,
+) {
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = { Text(label) },
         singleLine = true,
+        placeholder = if (placeholder != null) {
+            { Text(placeholder) }
+        } else {
+            null
+        },
         suffix = if (suffix != null) {
             { Text(suffix) }
         } else {
@@ -76,28 +91,56 @@ fun NumberField(value: String, onValueChange: (String) -> Unit, label: String, m
     )
 }
 
-/** Selo verde "VALE A PENA" ou vermelho "ABAIXO DA META". */
+val ProfitBand.color: Color
+    get() = when (this) {
+        ProfitBand.BOA -> BandGood
+        ProfitBand.MEDIA -> BandMid
+        ProfitBand.RUIM -> BandBad
+    }
+
+val ProfitBand.label: String
+    get() = when (this) {
+        ProfitBand.BOA -> "BOA"
+        ProfitBand.MEDIA -> "MÉDIA"
+        ProfitBand.RUIM -> "RUIM"
+    }
+
+/** Selo colorido da faixa (verde = boa, amarelo = média, vermelho = ruim). */
 @Composable
-fun VerdictBadge(viable: Boolean) {
-    Surface(color = if (viable) ProfitGood else ProfitBad, shape = MaterialTheme.shapes.small) {
+fun BandBadge(band: ProfitBand, prefix: String = "") {
+    Surface(color = band.color, shape = MaterialTheme.shapes.small) {
         Text(
-            if (viable) "VALE A PENA" else "ABAIXO DA META",
-            color = Color.White,
+            prefix + band.label,
+            color = if (band == ProfitBand.MEDIA) Color.Black else Color.White,
             style = MaterialTheme.typography.labelLarge,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
         )
     }
 }
 
-/** Bloco com o resultado completo de uma conta de lucro. */
+/** Bloco com o resultado completo de uma conta de lucro, colorido pelas faixas. */
 @Composable
-fun EconomicsBlock(e: RouteEconomics) {
-    VerdictBadge(e.isViable)
+fun EconomicsBlock(e: RouteEconomics, rating: ProfitRating) {
+    BandBadge(rating.overall, prefix = "OFERTA ")
     ValueRow("Receita", BrNumber.formatCents(e.revenueCents))
     ValueRow("Combustível", "- " + BrNumber.formatCents(e.fuelCostCents))
-    ValueRow("Desgaste do veículo", "- " + BrNumber.formatCents(e.wearCostCents))
-    ValueRow("Lucro líquido", BrNumber.formatCents(e.netProfitCents), bold = true, valueColor = if (e.netProfitCents >= 0) ProfitGood else ProfitBad)
-    ValueRow("Lucro por km", BrNumber.formatCents(e.netCentsPerKm) + "/km", bold = true)
-    e.netCentsPerHour?.let { ValueRow("Lucro por hora", BrNumber.formatCents(it) + "/h") }
-    ValueRow("Sua meta", BrNumber.formatCents(e.minNetCentsPerKm.toLong()) + "/km")
+    ValueRow("Custos fixos do veículo", "- " + BrNumber.formatCents(e.wearCostCents))
+    ValueRow("Lucro líquido", BrNumber.formatCents(e.netProfitCents), bold = true, valueColor = if (e.netProfitCents >= 0) BandGood else BandBad)
+    ValueRow("Lucro por km", BrNumber.formatCents(e.netCentsPerKm) + "/km", bold = true, valueColor = rating.perKm.color)
+    e.netCentsPerHour?.let { perHour ->
+        ValueRow("Lucro por hora", BrNumber.formatCents(perHour) + "/h", bold = true, valueColor = rating.perHour?.color ?: Color.Unspecified)
+    }
+    ValueRow("Ganho bruto por km", BrNumber.formatCents(e.grossCentsPerKm) + "/km")
+}
+
+/** Texto para leitura em voz alta do resultado. */
+fun spokenSummary(e: RouteEconomics, rating: ProfitRating): String {
+    val faixa = when (rating.overall) {
+        ProfitBand.BOA -> "Oferta boa."
+        ProfitBand.MEDIA -> "Oferta média."
+        ProfitBand.RUIM -> "Oferta ruim."
+    }
+    val km = "Lucro de ${BrNumber.formatCents(e.netCentsPerKm).replace("R$ ", "")} reais por quilômetro."
+    val hora = e.netCentsPerHour?.let { " ${BrNumber.formatCents(it).replace("R$ ", "")} reais por hora." } ?: ""
+    return "$faixa $km$hora"
 }

@@ -64,6 +64,10 @@ data class DeliveryStopEntity(
 
     @ColumnInfo(name = COL_FREIGHT_CENTS)
     val freightCents: Int,
+
+    /** Posição na rota (1, 2, 3...). Só define a ORDEM; não tem relação com o ID. */
+    @ColumnInfo(name = COL_ROUTE_ORDER, defaultValue = "0")
+    val routeOrder: Int = 0,
 ) {
     companion object {
         const val TABLE_NAME = "delivery_stops"
@@ -74,5 +78,6 @@ data class DeliveryStopEntity(
         const val COL_LONGITUDE = "longitude"
         const val COL_STATUS = "status"
         const val COL_FREIGHT_CENTS = "freight_cents"
+        const val COL_ROUTE_ORDER = "route_order"
     }
 }

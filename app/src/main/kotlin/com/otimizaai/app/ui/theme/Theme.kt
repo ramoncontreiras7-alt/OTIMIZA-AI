@@ -7,9 +7,12 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-/** Cores de "bom" e "ruim" para os vereditos de lucro. */
-val ProfitGood = Color(0xFF2E7D4F)
-val ProfitBad = Color(0xFFB23B2E)
+/** Cores das três faixas de lucro (boa / média / ruim). */
+val BandGood = Color(0xFF2E9E5B)
+val BandMid = Color(0xFFF2C230)
+val BandBad = Color(0xFFD9483B)
+val ProfitGood = BandGood
+val ProfitBad = BandBad
 
 private val Light = lightColorScheme(
     primary = Color(0xFF1D5D7A),

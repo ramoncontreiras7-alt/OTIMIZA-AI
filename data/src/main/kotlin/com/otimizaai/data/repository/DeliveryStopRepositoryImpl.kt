@@ -57,7 +57,10 @@ class DeliveryStopRepositoryImpl @Inject constructor(
     }
 
     override suspend fun upsert(stop: DeliveryStop) {
-        dao.upsert(stop.toEntity())
+        // Edição não pode mexer na posição da parada na rota.
+        val currentOrder = dao.findByKey(stop.id.value, stop.platformId.value)?.routeOrder
+            ?: dao.nextOrder(stop.sessionId.value)
+        dao.upsert(stop.toEntity(routeOrder = currentOrder))
     }
 
     override suspend fun updateCoordinate(key: StopKey, coordinate: GeoCoordinate): Boolean =
@@ -88,5 +91,21 @@ class DeliveryStopRepositoryImpl @Inject constructor(
 
     override suspend fun deleteBySession(sessionId: RouteSessionId) {
         dao.deleteBySession(sessionId.value)
+    }
+
+    override suspend fun delete(key: StopKey) {
+        dao.deleteByKey(key.nativeStopId.value, key.platformId.value)
+    }
+
+    override suspend fun reorder(sessionId: RouteSessionId, keysInOrder: List<StopKey>) {
+        dao.applyOrder(keysInOrder.map { it.nativeStopId.value to it.platformId.value })
+    }
+
+    override suspend fun transferPendingFromOtherSessions(targetSessionId: RouteSessionId): Int {
+        val pending = dao.findPendingOutside(targetSessionId.value)
+        pending.forEach {
+            dao.transferToSession(it.nativeStopId, it.platformId, targetSessionId.value, DeliveryStatus.PENDING.code)
+        }
+        return pending.size
     }
 }

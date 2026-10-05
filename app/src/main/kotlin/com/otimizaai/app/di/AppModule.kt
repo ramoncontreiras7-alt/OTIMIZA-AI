@@ -1,5 +1,6 @@
 package com.otimizaai.app.di
 
+import com.otimizaai.domain.usecase.CalculateCostPlanUseCase
 import com.otimizaai.domain.usecase.CalculateRouteProfitUseCase
 import dagger.Module
 import dagger.Provides
@@ -13,4 +14,7 @@ object AppModule {
 
     @Provides
     fun provideCalculateRouteProfit(): CalculateRouteProfitUseCase = CalculateRouteProfitUseCase()
+
+    @Provides
+    fun provideCalculateCostPlan(): CalculateCostPlanUseCase = CalculateCostPlanUseCase()
 }

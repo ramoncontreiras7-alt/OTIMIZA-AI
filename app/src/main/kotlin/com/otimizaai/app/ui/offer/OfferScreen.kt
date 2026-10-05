@@ -26,6 +26,9 @@ import com.otimizaai.app.ui.common.EconomicsBlock
 import com.otimizaai.app.ui.common.NumberField
 import com.otimizaai.app.ui.common.ScreenTitle
 import com.otimizaai.app.ui.common.SectionCard
+import com.otimizaai.app.ui.common.spokenSummary
+import com.otimizaai.app.voice.Speaker
+import com.otimizaai.domain.model.ProfitRating
 import com.otimizaai.domain.model.RouteEconomics
 import com.otimizaai.domain.usecase.CalculateRouteProfitUseCase
 import com.otimizaai.domain.util.BrNumber
@@ -34,12 +37,13 @@ import javax.inject.Inject
 import kotlin.math.roundToLong
 
 /** Resultado da avaliação: ou a conta, ou uma mensagem de erro. */
-data class OfferResult(val economics: RouteEconomics? = null, val error: String? = null)
+data class OfferResult(val economics: RouteEconomics? = null, val rating: ProfitRating? = null, val error: String? = null)
 
 @HiltViewModel
 class OfferViewModel @Inject constructor(
     private val settingsStore: SettingsStore,
     private val calculate: CalculateRouteProfitUseCase,
+    private val speaker: Speaker,
 ) : ViewModel() {
 
     fun evaluate(valueText: String, kmText: String, hoursText: String): OfferResult {
@@ -50,16 +54,18 @@ class OfferViewModel @Inject constructor(
         val hours = if (hoursText.isBlank()) null else BrNumber.parseDecimal(hoursText)?.toDouble()
         if (hoursText.isNotBlank() && (hours == null || hours <= 0)) return OfferResult(error = "Horas inválidas (ex.: 3).")
         val s = settingsStore.settings.value
-        return OfferResult(
-            economics = calculate(
-                distanceMeters = (km * 1000).roundToLong(),
-                revenueCents = cents,
-                fuelPriceCentsPerLiter = s.fuelPriceCentsPerLiter,
-                vehicle = s.vehicle(),
-                minNetCentsPerKm = s.minNetCentsPerKm,
-                estimatedDurationSeconds = hours?.let { (it * 3600).roundToLong() }?.takeIf { it > 0 },
-            ),
+        val economics = calculate(
+            distanceMeters = (km * 1000).roundToLong(),
+            revenueCents = cents,
+            fuelPriceCentsPerLiter = s.fuelPriceCentsPerLiter,
+            vehicle = s.vehicle(),
+            minNetCentsPerKm = s.goodNetCentsPerKm,
+            estimatedDurationSeconds = hours?.let { (it * 3600).roundToLong() }?.takeIf { it > 0 },
         )
+        val rating = ProfitRating.of(economics, s.kmLimits(), s.hourLimits())
+        // Leitura em voz alta, como no Gigu (pode desligar em Ajustes).
+        if (s.voiceEnabled) speaker.speak(spokenSummary(economics, rating))
+        return OfferResult(economics = economics, rating = rating)
     }
 }
 
@@ -92,12 +98,14 @@ fun OfferScreen(vm: OfferViewModel = hiltViewModel()) {
             result.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
 
-        result.economics?.let { e ->
-            SectionCard("Resultado") { EconomicsBlock(e) }
+        val e = result.economics
+        val r = result.rating
+        if (e != null && r != null) {
+            SectionCard("Resultado") { EconomicsBlock(e, r) }
         }
 
         Text(
-            "A conta usa o consumo, o preço do combustível, o desgaste e a meta da aba Ajustes.",
+            "A conta usa o consumo, o preço do combustível, os custos fixos e as faixas da aba Ajustes. Verde = boa, amarelo = média, vermelho = ruim.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

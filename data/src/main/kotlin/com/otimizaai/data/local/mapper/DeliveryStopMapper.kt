@@ -18,7 +18,7 @@ import com.otimizaai.domain.model.RouteSessionId
  * qualquer transformação. `.value` sai do domínio e volta embrulhado igual.
  */
 
-fun DeliveryStop.toEntity(): DeliveryStopEntity = DeliveryStopEntity(
+fun DeliveryStop.toEntity(routeOrder: Int = 0): DeliveryStopEntity = DeliveryStopEntity(
     nativeStopId = id.value,
     platformId = platformId.value,
     sessionId = sessionId.value,
@@ -31,6 +31,7 @@ fun DeliveryStop.toEntity(): DeliveryStopEntity = DeliveryStopEntity(
     addressPostalCode = address.postalCode,
     status = status.code,
     freightCents = freightCents,
+    routeOrder = routeOrder,
 )
 
 fun DeliveryStopEntity.toDomain(): DeliveryStop = DeliveryStop.create(

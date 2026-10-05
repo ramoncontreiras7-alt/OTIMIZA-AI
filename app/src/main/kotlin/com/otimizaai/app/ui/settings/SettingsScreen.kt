@@ -12,25 +12,34 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.otimizaai.app.settings.AppSettings
+import com.otimizaai.app.settings.NavigationApp
 import com.otimizaai.app.settings.SettingsStore
 import com.otimizaai.app.ui.common.NumberField
 import com.otimizaai.app.ui.common.ScreenTitle
 import com.otimizaai.app.ui.common.SectionCard
+import com.otimizaai.app.ui.theme.BandBad
+import com.otimizaai.app.ui.theme.BandGood
 import com.otimizaai.domain.model.VehicleType
 import com.otimizaai.domain.util.BrNumber
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 
 @HiltViewModel
@@ -38,33 +47,94 @@ class SettingsViewModel @Inject constructor(
     private val store: SettingsStore,
 ) : ViewModel() {
 
-    val current: AppSettings get() = store.settings.value
+    val settings: StateFlow<AppSettings> = store.settings
 
     /** Retorna mensagem de erro, ou null se salvou. */
-    fun save(type: VehicleType, consumption: String, fuel: String, wear: String, min: String): String? {
-        val c = BrNumber.parseDecimal(consumption)?.toDouble()
+    fun save(form: SettingsForm): String? {
+        val c = BrNumber.parseDecimal(form.consumption)?.toDouble()
         if (c == null || c <= 0) return "Consumo inválido (ex.: 11 para carro, 40 para moto)."
-        val f = BrNumber.parseCents(fuel)
-        if (f == null || f <= 0 || f > Int.MAX_VALUE) return "Preço do combustível inválido (ex.: 6,29)."
-        val w = BrNumber.parseCents(wear)
-        if (w == null || w < 0 || w > Int.MAX_VALUE) return "Desgaste inválido (ex.: 0,25)."
-        val m = BrNumber.parseCents(min)
-        if (m == null || m < 0 || m > Int.MAX_VALUE) return "Meta inválida (ex.: 2,00)."
-        store.saveSettings(AppSettings(type, c, f.toInt(), w.toInt(), m.toInt()))
+        val fuel = cents(form.fuel) ?: return "Preço do combustível inválido (ex.: 6,29)."
+        if (fuel <= 0) return "Preço do combustível inválido (ex.: 6,29)."
+        val fixed = cents(form.fixed) ?: return "Custo fixo por km inválido (ex.: 0,25)."
+        val lowKm = cents(form.lowKm) ?: return "Faixa ruim por km inválida."
+        val goodKm = cents(form.goodKm) ?: return "Faixa boa por km inválida."
+        val lowH = cents(form.lowHour) ?: return "Faixa ruim por hora inválida."
+        val goodH = cents(form.goodHour) ?: return "Faixa boa por hora inválida."
+        if (lowKm > goodKm || lowH > goodH) return "O valor de 'ruim' precisa ser menor que o de 'bom'."
+        val stopMin = form.stopMinutes.trim().toIntOrNull()
+        if (stopMin == null || stopMin < 0 || stopMin > 120) return "Tempo por parada inválido (ex.: 3)."
+        store.saveSettings(
+            AppSettings(
+                vehicleType = form.vehicle,
+                consumptionKmPerLiter = c,
+                fuelPriceCentsPerLiter = fuel,
+                fixedCostCentsPerKm = fixed,
+                lowNetCentsPerKm = lowKm,
+                goodNetCentsPerKm = goodKm,
+                lowNetCentsPerHour = lowH,
+                goodNetCentsPerHour = goodH,
+                navigationApp = form.navigation,
+                stopMinutes = stopMin,
+                voiceEnabled = form.voice,
+            ),
+        )
         return null
+    }
+
+    private fun cents(t: String): Int? {
+        val v = BrNumber.parseCents(t) ?: return null
+        return if (v < 0 || v > Int.MAX_VALUE) null else v.toInt()
     }
 }
 
+/** Valores do formulário, como texto digitado. */
+data class SettingsForm(
+    val vehicle: VehicleType,
+    val consumption: String,
+    val fuel: String,
+    val fixed: String,
+    val lowKm: String,
+    val goodKm: String,
+    val lowHour: String,
+    val goodHour: String,
+    val navigation: NavigationApp,
+    val stopMinutes: String,
+    val voice: Boolean,
+)
+
+private fun money(cents: Int): String = BrNumber.formatCents(cents.toLong()).removePrefix("R$ ")
+
 @Composable
-fun SettingsScreen(vm: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(onOpenWizard: () -> Unit, vm: SettingsViewModel = hiltViewModel()) {
     val context = LocalContext.current
-    val s = vm.current
-    var type by rememberSaveable { mutableStateOf(s.vehicleType) }
-    var consumption by rememberSaveable { mutableStateOf(BrNumber.formatDecimal(s.consumptionKmPerLiter, 1)) }
-    var fuel by rememberSaveable { mutableStateOf(BrNumber.formatCents(s.fuelPriceCentsPerLiter.toLong()).removePrefix("R$ ")) }
-    var wear by rememberSaveable { mutableStateOf(BrNumber.formatCents(s.wearCostCentsPerKm.toLong()).removePrefix("R$ ")) }
-    var min by rememberSaveable { mutableStateOf(BrNumber.formatCents(s.minNetCentsPerKm.toLong()).removePrefix("R$ ")) }
+    val s by vm.settings.collectAsStateWithLifecycle()
+    var vehicle by rememberSaveable { mutableStateOf(s.vehicleType) }
+    var consumption by rememberSaveable { mutableStateOf("") }
+    var fuel by rememberSaveable { mutableStateOf("") }
+    var fixed by rememberSaveable { mutableStateOf("") }
+    var lowKm by rememberSaveable { mutableStateOf("") }
+    var goodKm by rememberSaveable { mutableStateOf("") }
+    var lowHour by rememberSaveable { mutableStateOf("") }
+    var goodHour by rememberSaveable { mutableStateOf("") }
+    var navigation by rememberSaveable { mutableStateOf(s.navigationApp) }
+    var stopMinutes by rememberSaveable { mutableStateOf("") }
+    var voice by rememberSaveable { mutableStateOf(s.voiceEnabled) }
     var error by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // Preenche o formulário com o que está salvo (e de novo quando o assistente atualizar).
+    LaunchedEffect(s) {
+        vehicle = s.vehicleType
+        consumption = BrNumber.formatDecimal(s.consumptionKmPerLiter, 1)
+        fuel = money(s.fuelPriceCentsPerLiter)
+        fixed = money(s.fixedCostCentsPerKm)
+        lowKm = money(s.lowNetCentsPerKm)
+        goodKm = money(s.goodNetCentsPerKm)
+        lowHour = money(s.lowNetCentsPerHour)
+        goodHour = money(s.goodNetCentsPerHour)
+        navigation = s.navigationApp
+        stopMinutes = s.stopMinutes.toString()
+        voice = s.voiceEnabled
+    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -72,41 +142,62 @@ fun SettingsScreen(vm: SettingsViewModel = hiltViewModel()) {
     ) {
         ScreenTitle("Ajustes", "Usados em todas as contas de lucro")
 
-        SectionCard("Veículo") {
+        SectionCard("Assistente de custos") {
+            Text("Responda algumas perguntas (dias, km, meta, manutenção, seguro, IPVA...) e o app calcula seu custo por km e as faixas de ruim/bom.")
+            Button(onClick = onOpenWizard, modifier = Modifier.fillMaxWidth()) { Text("Calcular meu custo por km") }
+        }
+
+        SectionCard("Veículo e combustível") {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = type == VehicleType.CAR,
-                    onClick = { type = VehicleType.CAR; if (consumption.isBlank()) consumption = "11,0" },
-                    label = { Text("Carro") },
-                )
-                FilterChip(
-                    selected = type == VehicleType.MOTORCYCLE,
-                    onClick = { type = VehicleType.MOTORCYCLE; if (consumption.isBlank()) consumption = "40,0" },
-                    label = { Text("Moto") },
-                )
+                FilterChip(selected = vehicle == VehicleType.CAR, onClick = { vehicle = VehicleType.CAR }, label = { Text("Carro") })
+                FilterChip(selected = vehicle == VehicleType.MOTORCYCLE, onClick = { vehicle = VehicleType.MOTORCYCLE }, label = { Text("Moto") })
             }
-            NumberField(consumption, { consumption = it; error = null }, "Consumo médio", suffix = "km/L")
-            NumberField(wear, { wear = it; error = null }, "Desgaste (pneu, óleo, manutenção)", suffix = "R$/km")
-        }
-
-        SectionCard("Combustível e meta") {
+            NumberField(consumption, { consumption = it; error = null }, "Autonomia", suffix = "km/L")
             NumberField(fuel, { fuel = it; error = null }, "Preço do litro", suffix = "R$")
-            NumberField(min, { min = it; error = null }, "Lucro mínimo aceitável", suffix = "R$/km")
+            NumberField(fixed, { fixed = it; error = null }, "Custos fixos por km (manutenção, seguro, IPVA...)", suffix = "R$/km")
         }
 
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        SectionCard("Faixas de lucro líquido por km") {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NumberField(lowKm, { lowKm = it; error = null }, "Ruim abaixo de", Modifier.weight(1f), suffix = "R$")
+                NumberField(goodKm, { goodKm = it; error = null }, "Boa a partir de", Modifier.weight(1f), suffix = "R$")
+            }
+            Text("Entre os dois valores, a oferta é MÉDIA.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+
+        SectionCard("Faixas de lucro líquido por hora") {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NumberField(lowHour, { lowHour = it; error = null }, "Ruim abaixo de", Modifier.weight(1f), suffix = "R$")
+                NumberField(goodHour, { goodHour = it; error = null }, "Boa a partir de", Modifier.weight(1f), suffix = "R$")
+            }
+        }
+
+        SectionCard("Rota e navegação") {
+            Text("App de navegação", style = MaterialTheme.typography.labelLarge)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(selected = navigation == NavigationApp.GOOGLE_MAPS, onClick = { navigation = NavigationApp.GOOGLE_MAPS }, label = { Text("Google Maps") })
+                FilterChip(selected = navigation == NavigationApp.WAZE, onClick = { navigation = NavigationApp.WAZE }, label = { Text("Waze") })
+            }
+            NumberField(stopMinutes, { stopMinutes = it; error = null }, "Tempo médio em cada parada", suffix = "min")
+        }
+
+        SectionCard("Voz") {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Ler o resultado da oferta em voz alta", Modifier.weight(1f))
+                Switch(checked = voice, onCheckedChange = { voice = it })
+            }
+        }
+
+        error?.let { Text(it, color = BandBad) }
         Button(
             onClick = {
-                error = vm.save(type, consumption, fuel, wear, min)
+                error = vm.save(SettingsForm(vehicle, consumption, fuel, fixed, lowKm, goodKm, lowHour, goodHour, navigation, stopMinutes, voice))
                 if (error == null) Toast.makeText(context, "Ajustes salvos.", Toast.LENGTH_SHORT).show()
             },
             modifier = Modifier.fillMaxWidth(),
         ) { Text("Salvar ajustes") }
-
-        Text(
-            "Dica: para moto, um consumo comum fica entre 35 e 45 km/L e o desgaste perto de R$ 0,12/km.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        OutlinedButton(onClick = onOpenWizard, modifier = Modifier.fillMaxWidth()) {
+            Text("Refazer o assistente de custos", color = BandGood)
+        }
     }
 }
