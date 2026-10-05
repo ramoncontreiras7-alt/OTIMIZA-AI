@@ -1,0 +1,20 @@
+# Arquivos gerados pelo Gradle e pelo Android Studio (não vão para o GitHub)
+.gradle/
+build/
+*/build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Pacotes compactados usados só para transferir o código
+*.zip
+
+# Chaves e segredos NUNCA vão para o repositório
+*.jks
+*.keystore
+keystore.properties
+secrets.properties

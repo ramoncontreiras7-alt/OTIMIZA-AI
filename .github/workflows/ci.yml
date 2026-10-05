@@ -1,0 +1,48 @@
+# Verificação automática: a cada envio de código, o GitHub compila o projeto
+# e roda todos os testes. Se algo quebrar, aparece um X vermelho no commit.
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Instalar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Preparar o Gradle (com cache)
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Dar permissão ao gradlew
+        run: chmod +x gradlew
+
+      - name: Testes do domínio (regras de negócio)
+        run: ./gradlew :domain:test --stacktrace
+
+      - name: Testes e compilação do módulo de dados (banco)
+        run: ./gradlew :data:testDebugUnitTest :data:assembleDebug --stacktrace
+
+      - name: Guardar relatórios de teste
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: relatorios-de-teste
+          path: |
+            **/build/reports/tests/
+            **/build/test-results/
+          if-no-files-found: ignore
