@@ -3,32 +3,20 @@ package com.otimizaai.domain.usecase
 import com.otimizaai.domain.model.DeliveryStatus
 import com.otimizaai.domain.model.DeliveryStop
 import com.otimizaai.domain.model.PlatformFinancialConfig
-import com.otimizaai.domain.model.PricingRule
 import com.otimizaai.domain.model.RouteOffer
 import com.otimizaai.domain.model.RouteOfferEvaluation
-import com.otimizaai.domain.model.RuleCheck
-import com.otimizaai.domain.model.RuleStatus
 import com.otimizaai.domain.model.VehicleProfile
 import com.otimizaai.domain.util.BrNumber
-import com.otimizaai.domain.util.TextMatch
-import java.math.BigDecimal
-import java.math.RoundingMode
 import javax.inject.Inject
 
 /**
- * Motor financeiro com regras por plataforma (evolução do CPK).
+ * Avalia uma oferta COM km conhecido: custo do veículo + regras da plataforma.
  *
- * Passo a passo:
- *  1. Faz a conta de custo de sempre (combustível + custos fixos) com [CalculateRouteProfitUseCase].
- *  2. Pega as regras da plataforma da oferta.
- *  3. Soma os acréscimos de bairro (NeighborhoodBonus) das entregas.
- *  4. Confere cada regra:
- *       - MinimumRouteValue: só vale se a coleta for naquele galpão.
- *         Exige: valor >= mínimo do galpão + acréscimos de bairro.
- *       - ValuePerKm: exige valor >= (R$/km × km) + acréscimos de bairro.
- *  5. Viável = nenhuma regra reprovou E o lucro depois dos custos não é negativo.
+ *  1. Conta de custo de sempre (combustível + custos fixos) com [CalculateRouteProfitUseCase].
+ *  2. Regras ativas da plataforma via [PricingRuleEngine] (galpão, R$/km, R$/hora, bairros).
+ *  3. Viável = nenhuma regra reprovou E o lucro depois dos custos não é negativo.
  *
- * As faixas ruim/média/boa (ProfitRating) continuam valendo à parte, para a cor do cartão.
+ * Para ofertas lidas da tela (que podem não ter km), use [EvaluateOfferViabilityUseCase].
  */
 class EvaluateRouteOfferUseCase @Inject constructor(
     private val calculateProfit: CalculateRouteProfitUseCase,
@@ -49,53 +37,34 @@ class EvaluateRouteOfferUseCase @Inject constructor(
             minNetCentsPerKm = minNetCentsPerKm,
             estimatedDurationSeconds = offer.durationSeconds,
         )
-
-        val rules = configs.filter { it.enabled && it.platform == offer.platform }.flatMap { it.rules }
-        val bonusRules = rules.filterIsInstance<PricingRule.NeighborhoodBonus>()
-
-        // Acréscimos de bairro: cada entrega no bairro configurado soma o bônus.
-        val bonusChecks = bonusRules.map { rule ->
-            val hits = offer.deliveryNeighborhoods.count { TextMatch.sameName(it, rule.neighborhoodName) }
-            if (hits > 0) {
-                RuleCheck(rule, RuleStatus.PASSOU, rule.bonusCents * hits,
-                    "$hits entrega(s) em ${rule.neighborhoodName}: + ${BrNumber.formatCents(rule.bonusCents * hits)} no mínimo exigido.")
-            } else {
-                RuleCheck(rule, RuleStatus.NAO_SE_APLICA, null, "Nenhuma entrega em ${rule.neighborhoodName}.")
-            }
-        }
-        val bonusTotal = bonusChecks.sumOf { it.requiredCents ?: 0L }
-
-        val valueChecks = rules.mapNotNull { rule ->
-            when (rule) {
-                is PricingRule.MinimumRouteValue -> checkWarehouse(rule, offer, bonusTotal)
-                is PricingRule.ValuePerKm -> checkPerKm(rule, offer, bonusTotal)
-                is PricingRule.NeighborhoodBonus -> null
-            }
-        }
-
-        val checks = valueChecks + bonusChecks
-        val failed = checks.filter { it.status == RuleStatus.FALHOU }
+        val outcome = PricingRuleEngine.evaluate(
+            rules = configs.filter { it.platform == offer.platform }.flatMap { it.activeRules },
+            warehouse = offer.warehouse,
+            neighborhoods = offer.deliveryNeighborhoods,
+            freightCents = offer.revenueCents,
+            distanceMeters = offer.distanceMeters,
+            durationSeconds = offer.durationSeconds,
+        )
         val reasons = buildList {
-            failed.forEach { add(it.detail) }
+            outcome.failed.forEach { add(it.detail) }
             if (economics.netProfitCents < 0) {
                 add("Dá prejuízo: depois de combustível e custos do veículo sobram ${BrNumber.formatCents(economics.netProfitCents)}.")
             }
         }
         return RouteOfferEvaluation(
             economics = economics,
-            checks = checks,
-            neighborhoodBonusCents = bonusTotal,
-            requiredMinimumCents = valueChecks.filter { it.status != RuleStatus.NAO_SE_APLICA }.mapNotNull { it.requiredCents }.maxOrNull(),
+            checks = outcome.checks,
+            neighborhoodBonusCents = outcome.neighborhoodBonusCents,
+            requiredMinimumCents = outcome.requiredMinimumCents,
             isViable = reasons.isEmpty(),
             reasons = reasons,
         )
     }
 
     /**
-     * Avalia uma rota já montada com paradas de UMA plataforma (ex.: a rota do dia do ML).
-     * Usa o galpão e os bairros gravados nas próprias paradas. Paradas que falharam não contam.
-     * Rotas com várias plataformas: avalie cada oferta antes de aceitar (o km por plataforma
-     * não é conhecido depois que tudo vira uma rota só).
+     * Avalia uma rota já montada com paradas de UMA plataforma, usando o galpão e os
+     * bairros gravados nas paradas. Paradas que falharam não contam.
+     * Rotas com várias plataformas: avalie cada oferta antes de aceitar.
      */
     fun forStops(
         stops: List<DeliveryStop>,
@@ -120,37 +89,5 @@ class EvaluateRouteOfferUseCase @Inject constructor(
             deliveryNeighborhoods = counted.mapNotNull { it.neighborhood },
         )
         return invoke(offer, configs, vehicle, fuelPriceCentsPerLiter, minNetCentsPerKm)
-    }
-
-    private fun checkWarehouse(rule: PricingRule.MinimumRouteValue, offer: RouteOffer, bonus: Long): RuleCheck {
-        val warehouse = offer.warehouse
-        if (warehouse == null || !TextMatch.containsWord(warehouse, rule.warehouseId)) {
-            return RuleCheck(rule, RuleStatus.NAO_SE_APLICA, null, "Coleta não é no ${rule.warehouseId}.")
-        }
-        val required = rule.minValueCents + bonus
-        return if (offer.revenueCents >= required) {
-            RuleCheck(rule, RuleStatus.PASSOU, required,
-                "Galpão ${rule.warehouseId}: paga ${BrNumber.formatCents(offer.revenueCents)}, mínimo ${BrNumber.formatCents(required)}.")
-        } else {
-            RuleCheck(rule, RuleStatus.FALHOU, required,
-                "Galpão ${rule.warehouseId}: paga ${BrNumber.formatCents(offer.revenueCents)}, abaixo do mínimo de ${BrNumber.formatCents(required)}.")
-        }
-    }
-
-    private fun checkPerKm(rule: PricingRule.ValuePerKm, offer: RouteOffer, bonus: Long): RuleCheck {
-        val base = BigDecimal.valueOf(offer.distanceMeters)
-            .multiply(BigDecimal.valueOf(rule.priceCentsPerKm.toLong()))
-            .divide(BigDecimal.valueOf(1000), 0, RoundingMode.HALF_UP)
-            .toLong()
-        val required = base + bonus
-        val km = BrNumber.formatDecimal(offer.distanceMeters / 1000.0, 1)
-        val perKm = BrNumber.formatCents(rule.priceCentsPerKm.toLong())
-        return if (offer.revenueCents >= required) {
-            RuleCheck(rule, RuleStatus.PASSOU, required,
-                "$km km × $perKm = mínimo ${BrNumber.formatCents(required)}; paga ${BrNumber.formatCents(offer.revenueCents)}.")
-        } else {
-            RuleCheck(rule, RuleStatus.FALHOU, required,
-                "$km km × $perKm exige ${BrNumber.formatCents(required)}, mas a oferta paga ${BrNumber.formatCents(offer.revenueCents)}.")
-        }
     }
 }
