@@ -98,8 +98,8 @@ class PlatformRulesTest {
     @Test
     @DisplayName("Valor por km (Magalu): 19 km × R$ 2,50 exige R$ 47,50")
     fun valuePerKm() {
-        val configs = listOf(PlatformFinancialConfig(Platform.MAGALU, listOf(PricingRule.ValuePerKm(250))))
-        val offer = RouteOffer(Platform.MAGALU, null, 4_059, 19_000)
+        val configs = listOf(PlatformFinancialConfig(Platform.MAGALU_ULTRA, listOf(PricingRule.ValuePerKm(250))))
+        val offer = RouteOffer(Platform.MAGALU_ULTRA, null, 4_059, 19_000)
         val r = evaluate(offer, configs, car, 629, 200)
         assertEquals(4_750L, r.checks.single().requiredCents)
         assertEquals(RuleStatus.FALHOU, r.checks.single().status)
@@ -144,7 +144,7 @@ class PlatformRulesTest {
     @DisplayName("Regras de outra plataforma ou desligadas não interferem")
     fun otherPlatformIgnored() {
         val configs = listOf(
-            PlatformFinancialConfig(Platform.MAGALU, listOf(PricingRule.ValuePerKm(9_999))),
+            PlatformFinancialConfig(Platform.MAGALU_ULTRA, listOf(PricingRule.ValuePerKm(9_999))),
             PlatformFinancialConfig(Platform.IFOOD, listOf(PricingRule.ValuePerKm(9_999)), enabled = false),
         )
         val r = evaluate(RouteOffer(Platform.IFOOD, null, 4_059, 19_000), configs, car, 629, 200)

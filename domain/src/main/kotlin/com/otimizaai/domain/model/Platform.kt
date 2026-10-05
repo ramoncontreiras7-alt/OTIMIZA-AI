@@ -15,7 +15,11 @@ enum class Platform(val id: PlatformId) {
     MERCADO_LIVRE(PlatformId("MERCADO_LIVRE")),
     LALAMOVE(PlatformId("LALAMOVE")),
     AMAZON_FLEX(PlatformId("AMAZON_FLEX")),
-    MAGALU(PlatformId("MAGALU"));
+    /** Magalu Ultra: ofertas de rota com coleta em loja (ex.: Petz), km e bairros. Código "MAGALU" mantido por compatibilidade. */
+    MAGALU_ULTRA(PlatformId("MAGALU")),
+
+    /** Magalu Entregas (leves e pesadas): visitas com cliente, telefone e IDs (tela "Detalhes da visita"). */
+    MAGALU_ENTREGAS(PlatformId("MAGALU_ENTREGAS"));
 
     companion object {
         private val byId: Map<PlatformId, Platform> = entries.associateBy { it.id }
